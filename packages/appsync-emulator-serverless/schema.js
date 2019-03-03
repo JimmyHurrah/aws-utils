@@ -210,15 +210,13 @@ const generateTypeResolver = (
     log.info('resolver request', request);
     let requestResult = await dispatchRequestToSource(source, configs, request);
     if (request.operation === 'BatchInvoke') {
-      // unpack before running VTL template
-      [requestResult] = requestResult;
-    }
-    let response = runResponseVTL(responsePath, resolverArgs, requestResult);
-    if (request.operation === 'BatchInvoke') {
       // The Lambda function is expected to return a list-shaped response
       // https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-lambda.html
-      response = [response];
+      [requestResult] = requestResult;
     }
+
+    const response = runResponseVTL(responsePath, resolverArgs, requestResult);
+
     consola.info(
       'Rendered Response:\n',
       inspect(response, { depth: null, colors: true }),
