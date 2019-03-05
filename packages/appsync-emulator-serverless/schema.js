@@ -200,18 +200,25 @@ const generateTypeResolver = (
     assert(context && context.jwt, 'must have context.jwt');
     const resolverArgs = { root, vars, context, info };
     const request = runRequestVTL(requestPath, resolverArgs);
+    if (request.operation === 'BatchInvoke') {
+      // BatchInvoke lambdas expectes a list payload
+      // https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-lambda.html
+      request.payload = [request.payload];
+    }
     consola.info(
       'Rendered Request:\n',
       inspect(request, { depth: null, colors: true }),
     );
     log.info('resolver request', request);
-    const requestResult = await dispatchRequestToSource(
-      source,
-      configs,
-      request,
-    );
+    let requestResult = await dispatchRequestToSource(source, configs, request);
+    if (request.operation === 'BatchInvoke') {
+      // The Lambda function is expected to return a list-shaped response
+      // https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference-lambda.html
+      [requestResult] = requestResult;
+    }
 
     const response = runResponseVTL(responsePath, resolverArgs, requestResult);
+
     consola.info(
       'Rendered Response:\n',
       inspect(response, { depth: null, colors: true }),
